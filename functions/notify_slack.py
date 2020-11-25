@@ -46,6 +46,135 @@ def cloudwatch_notification(message, region):
     }
 
 
+def codepipeline_approval(message):
+    """Uses Slack's Block Kit."""
+    console_link = message['consoleLink']
+    approval = message['approval']
+    pipeline_name = approval['pipelineName']
+    action_name = approval['actionName']
+    approval_review_link = approval['approvalReviewLink']
+    expires = approval['expires']
+
+    return {
+        'color': '#00D0FF',
+        'blocks': (
+            {
+                'type': 'section',
+                'text': {
+                    'type': 'plain_text',
+                    'text': f'Pipeline "{pipeline_name}" is waiting for approval.',
+                },
+                'accessory': {
+                    'type': 'button',
+                    'text': {
+                        'type': 'plain_text',
+                        'text': 'Open in :aws: Console',
+                        'emoji': True,
+                    },
+                    'url': console_link,
+                },
+            },
+            {
+                'type': 'section',
+                'fields': [
+                    {
+                        'type': 'mrkdwn',
+                        'text': f'*Action name*:\n{action_name}',
+                    },
+                    {
+                        'type': 'mrkdwn',
+                        'text': f'*Expires:* {expires}',
+                    },
+                ],
+            },
+            {
+                'type': 'actions',
+                'elements': [
+                    {
+                        'type': 'button',
+                        'text': {
+                            'type': 'plain_text',
+                            'emoji': False,
+                            'text': 'Review approve',
+                        },
+                        'style': 'primary',
+                        'url': approval_review_link,
+                    },
+                ],
+            },
+        )
+    }
+
+
+def codepipeline_detail(message):
+    """Uses Slack's Block Kit."""
+    def get_emoji(state):
+        states = {
+            'CANCELLED': ('#9D9D9D', ':grey_exclamation:'),  # grey
+            'FAILED': ('#D10C20', ':x:'),
+            'RESUMED': ('#006234', ':recycle:'),  # dark green
+            'STARTED': ('#0059C6', ':information_source:'),  # blue
+            'SUCCEEDED': ('#41AA58', ':heavy_check_mark:'),
+            'SUPERSEDED': ('#DAA038', ':heavy_minus_sign:'),
+        }
+        return states.get(state, ('#DAA038', ':grey_question:'))
+
+    time = message['time']
+    detail = message['detail']
+    pipeline = detail['pipeline']
+    execution_id = detail['execution-id']
+    state = detail['state']
+    color, emoji = get_emoji(state)
+
+    return {
+        'color': color,
+        'blocks': (
+            {
+                'type': 'section',
+                'text': {
+                    'type': 'plain_text',
+                    'emoji': True,
+                    'text': f'{emoji} {state.capitalize()} pipeline "{pipeline}".',
+                },
+            },
+            {
+                'type': 'section',
+                'fields': [
+                    {
+                        'type': 'mrkdwn',
+                        'text': f'*State:*\n{state}',
+                    },
+                    {
+                        'type': 'mrkdwn',
+                        'text': f'*Execution ID:*\n`{execution_id}`',
+                    },
+                ],
+            },
+            {
+                'type': 'context',
+                'elements': [
+                    {
+                        'type': 'mrkdwn',
+                        'text': f'*Timestamp:* {time}',
+                    },
+                ],
+            },
+        ),
+    }
+
+
+def codepipeline_notification(event):
+    if isinstance(event, str):
+        event = json.loads(event)
+
+    if 'approval' in event:
+        notification = codepipeline_approval(event)
+    if 'detail' in event:
+        notification = codepipeline_detail(event)
+
+    return notification
+
+
 def default_notification(subject, message):
     return {
         'fallback': 'A new message',
@@ -86,6 +215,9 @@ def notify_slack(subject, message, region):
         notification = cloudwatch_notification(message, region)
         payload['text'] = 'AWS CloudWatch notification - ' + message['AlarmName']
         payload['attachments'].append(notification)
+    elif 'approval' in message or 'detail' in message:
+        notification = codepipeline_notification(message)
+        payload['attachments'].append(notification)
     else:
         payload['text'] = 'AWS notification'
         payload['attachments'].append(default_notification(subject, message))
@@ -112,6 +244,6 @@ def lambda_handler(event, context):
 
     if json.loads(response)['code'] != 200:
         logger.error('Error: received status "%s" using event "%s" and context "%s"',
-                      json.loads(response)['info'], event, context)
+                     json.loads(response)['info'], event, context)
 
     return response
