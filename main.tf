@@ -21,7 +21,7 @@ locals {
     sid       = "AllowWriteToCloudwatchLogs"
     effect    = "Allow"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-    resources = [replace("${element(concat(aws_cloudwatch_log_group.lambda[*].arn, list("")), 0)}:*", ":*:*", ":*")]
+    resources = [replace("${element(concat(aws_cloudwatch_log_group.lambda[*].arn, [""]), 0)}:*", ":*:*", ":*")]
   }
 
   lambda_policy_document_kms = {
@@ -61,13 +61,13 @@ resource "aws_sns_topic_subscription" "sns_notify_slack" {
 
   topic_arn     = local.sns_topic_arn
   protocol      = "lambda"
-  endpoint      = module.lambda.this_lambda_function_arn
+  endpoint      = module.lambda.lambda_function_arn
   filter_policy = var.subscription_filter_policy
 }
 
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "1.28.0"
+  version = "2.4.0"
 
   create = var.create
 
