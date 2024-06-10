@@ -111,6 +111,7 @@ To run the tests:
 | lambda\_function\_name | The name of the Lambda function to create | `string` | `"notify_slack"` | no |
 | lambda\_function\_tags | Additional tags for the Lambda function | `map(string)` | `{}` | no |
 | lambda\_role | IAM role attached to the Lambda Function.  If this is set then a role will not be created for you. | `string` | `""` | no |
+| lambda\_runtime | Lambda Function runtime | `string` | `python3.11` | no |
 | log\_events | Boolean flag to enabled/disable logging of incoming events | `bool` | `false` | no |
 | reserved\_concurrent\_executions | The amount of reserved concurrent executions for this lambda function. A value of 0 disables lambda from being triggered and -1 removes any concurrency limitations | `number` | `-1` | no |
 | slack\_channel | The name of the channel in Slack for notifications | `string` | n/a | yes |

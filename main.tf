@@ -76,7 +76,7 @@ module "lambda" {
 
   handler                        = "notify_slack.lambda_handler"
   source_path                    = "${path.module}/functions/notify_slack.py"
-  runtime                        = "python3.8"
+  runtime                        = var.lambda_runtime
   timeout                        = 30
   kms_key_arn                    = var.kms_key_arn
   reserved_concurrent_executions = var.reserved_concurrent_executions
